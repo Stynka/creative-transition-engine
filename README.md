@@ -2,8 +2,8 @@
 
 A six-agent AI pipeline that translates creative and embodied experience for a specific receiver — a hiring panel, an arts funder — with every claim traceable to the practitioner's own words.
 
-**Live app:** [published Claude artifact — paste URL here]
-**Demo video:** [paste URL here]
+**Live app:**  https://claude.ai/public/artifacts/58ab431a-cbfb-46c3-ae17-41703590e239
+
 
 ## Why this isn't a resume builder
 Resume tools polish wording. This system does three things they don't: it *extracts* capabilities from raw, messy first-person stories (with verbatim evidence quotes as an anti-fabrication gate); it *profiles the receiver* — including what they're implicitly afraid of; and it makes the mapping between the two *auditable*: a human approves or rejects every bridge before a word of prose is written.
@@ -24,3 +24,4 @@ Orchestration is deterministic application code (a state machine in `app/`); mod
 
 ## Iteration history
 `v1/` contains the original single-skill "practice-translator" (CLAUDE.md, SKILL.md, trigger tests). Testing v1 exposed the gap this system fills: translation quality depends on receiver understanding, and outputs need measurable success criteria.
+
