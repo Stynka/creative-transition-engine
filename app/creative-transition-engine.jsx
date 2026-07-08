@@ -474,7 +474,7 @@ export default function CreativeTransitionEngine() {
           <div style={{ display: "grid", gap: 40 }}>
             <section>
               <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 20, margin: "0 0 12px" }}>
-                <Num n={1} />Raw material — tell one story, messily
+                <Num n={1} />Raw material — tell one story in your own words
               </h2>
               <textarea value={rawStory} onChange={(e) => setRawStory(e.target.value)} rows={8}
                 aria-label="Your raw story"
