@@ -20,5 +20,6 @@
 |---|------|--------|---------------------------|-----------------------------|-------------|---------------|-------|
 | 1 |      |        |                           |                             |             |               |       |
 
+| 2 | 8 Jul 2026 | Arts funding — fund brief | — | — | — | — | Run did not complete: failed at the Input stage (before Scout could process it), returning "Overloaded" errors. Persisted across 3 retries, a full page refresh, and a re-test directly in the original Claude chat (not just the published artifact) — ruling out a publish-specific issue. Model config confirmed correct (claude-sonnet-4-6), so not a code bug. Reads as a genuine reliability gap: no automatic backoff beyond a manual retry button, and no fallback when the model is temporarily unavailable. |
 ## Trigger heritage
 This extends v1's trigger-test.md approach (should/shouldn't invoke, expected vs actual) from a single skill to a staged pipeline: each agent has an output contract above, and a run fails the eval if any stage breaks contract.
