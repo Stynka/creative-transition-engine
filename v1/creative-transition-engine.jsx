@@ -516,7 +516,7 @@ export default function CreativeTransitionEngine() {
             <Card>
               <Eyebrow>01 · Raw material</Eyebrow>
               <label style={{ fontWeight: 600, fontSize: 14 }}>
-                Tell one story, messily
+                Tell one story in your own words
                 <textarea
                   value={rawStory}
                   onChange={(e) => setRawStory(e.target.value)}
