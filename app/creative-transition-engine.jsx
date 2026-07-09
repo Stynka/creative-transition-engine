@@ -135,13 +135,15 @@ Hunt violations of the spec below and any invented claims; rewrite if needed.
 ${BANNED_SPEC}
 
 Rules:
+- Name one thing that works before listing what doesn't. Be specific — quote the line. This is not softening; the violations stay exactly as sharp. A good editor tells you what to keep.
+- "what_works": one sentence, quoting a specific line from the draft that genuinely lands, and saying plainly why. Must be honest — if nothing works, say so rather than inventing praise.
 - Quote each violating phrase exactly in "text", name the pattern number, explain in maximum 10 words.
 - INVENTION check: flag any claim not traceable to the evidence quotes.
 - If ANY violation: verdict "fail" plus a full corrected rewrite (same shape) fixing every violation, no new claims.
 - If clean: verdict "pass", rewrite null.
 - HARD BUDGET: maximum 6 violations listed.
 Return ONLY valid JSON, no fences, no preamble:
-{"verdict":"pass|fail","violations":[{"text":"...","pattern":"...","why":"..."}],"rewrite":{"narrative":"...","bullets":["...","...","..."]}}`;
+{"verdict":"pass|fail","what_works":"...","violations":[{"text":"...","pattern":"...","why":"..."}],"rewrite":{"narrative":"...","bullets":["...","...","..."]}}`;
 
 /* ---------------- Robust JSON + API layer ---------------- */
 
@@ -289,6 +291,10 @@ export default function CreativeTransitionEngine() {
 
   const [ideas, setIdeas] = useState(null);
   const [ideasLoading, setIdeasLoading] = useState(false);
+
+  const [recognition, setRecognition] = useState(null); // "yes" | "not_quite" | null
+  const [brokenLine, setBrokenLine] = useState("");
+  const [brokenLineSubmitted, setBrokenLineSubmitted] = useState(false);
 
   const go = (n) => { setStep(n); setMaxStep((m) => Math.max(m, n)); setError(null); };
 
@@ -443,6 +449,7 @@ export default function CreativeTransitionEngine() {
     setStep(0); setMaxStep(0);
     setGraph(null); setProfile(null); setBridges(null); setRejection(""); setGapState({});
     setDraft(null); setCritique(null); setError(null); setIdeas(null);
+    setRecognition(null); setBrokenLine(""); setBrokenLineSubmitted(false);
   };
 
   const inputsReady = rawStory.trim().length > 40 && targetText.trim().length > 40;
@@ -815,6 +822,11 @@ export default function CreativeTransitionEngine() {
                 <div style={{ ...tag, color: critique.verdict === "pass" ? C.green : C.amber, marginBottom: 10 }}>
                   Critic report — {critique.verdict === "pass" ? "clean on first pass" : `${(critique.violations || []).length} violation(s) caught and rewritten`}
                 </div>
+                {critique.what_works && (
+                  <div style={{ fontSize: 14, color: C.green, marginBottom: 14 }}>
+                    <span style={{ fontWeight: 600 }}>What works: </span>{critique.what_works}
+                  </div>
+                )}
                 {critique.verdict === "fail" && (critique.violations || []).map((v, i) => (
                   <div key={i} style={{ fontSize: 14, marginBottom: 6 }}>
                     <span style={{ fontStyle: "italic", color: C.red }}>“{v.text}”</span>
@@ -829,6 +841,39 @@ export default function CreativeTransitionEngine() {
                 </div>
               </section>
             )}
+
+            <section>
+              <div style={{ ...tag, marginBottom: 12 }}>Does this sound like you?</div>
+              {!recognition && (
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <Btn onClick={() => setRecognition("yes")}>Yes, that's me</Btn>
+                  <Btn onClick={() => setRecognition("not_quite")}>Not quite</Btn>
+                </div>
+              )}
+              {recognition === "yes" && (
+                <div style={{ fontSize: 14, color: C.sub }}>Good — that's the whole point of the exercise.</div>
+              )}
+              {recognition === "not_quite" && !brokenLineSubmitted && (
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>Which sentence broke it?</div>
+                  <textarea
+                    value={brokenLine}
+                    onChange={(e) => setBrokenLine(e.target.value)}
+                    rows={3}
+                    style={{ width: "100%", fontFamily: F.body, fontSize: 14, padding: 12, border: `2px solid ${C.ink}`, background: C.bg, color: C.ink, resize: "vertical" }}
+                  />
+                  <div style={{ fontSize: 13, color: C.sub, marginTop: 8, marginBottom: 12 }}>
+                    This is the most useful thing you can tell the system. Nothing else measures whether the translation worked.
+                  </div>
+                  <Btn primary onClick={() => setBrokenLineSubmitted(true)} disabled={!brokenLine.trim()}>Submit</Btn>
+                </div>
+              )}
+              {recognition === "not_quite" && brokenLineSubmitted && (
+                <div style={{ fontSize: 14, color: C.sub }}>
+                  Noted for this session: <span style={{ fontStyle: "italic", color: C.ink }}>“{brokenLine}”</span>
+                </div>
+              )}
+            </section>
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <Btn primary onClick={copyFinal}>{copied ? "Copied" : "Copy final text"}</Btn>

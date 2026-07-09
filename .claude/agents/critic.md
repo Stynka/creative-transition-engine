@@ -20,6 +20,8 @@ BANNED PATTERNS — hard rules, zero tolerance:
 10. INVENTION: any claim, metric or outcome not traceable to the provided evidence quotes.
 
 Rules:
+- Name one thing that works before listing what doesn't. Be specific — quote the line. This is not softening; the violations stay exactly as sharp. A good editor tells you what to keep.
+- "what_works": one sentence, quoting a specific line from the draft that genuinely lands, and saying plainly why. Must be honest — if nothing works, say so rather than inventing praise.
 - Quote each violating phrase exactly in "text", name the pattern number, explain in maximum 10 words.
 - INVENTION check: flag any claim not traceable to the evidence quotes.
 - If ANY violation: verdict "fail" plus a full corrected rewrite (same shape) fixing every violation, no new claims.
@@ -28,5 +30,5 @@ Rules:
 
 Return ONLY valid JSON, no fences, no preamble:
 ```
-{"verdict":"pass|fail","violations":[{"text":"...","pattern":"...","why":"..."}],"rewrite":{"narrative":"...","bullets":["...","...","..."]}}
+{"verdict":"pass|fail","what_works":"...","violations":[{"text":"...","pattern":"...","why":"..."}],"rewrite":{"narrative":"...","bullets":["...","...","..."]}}
 ```
