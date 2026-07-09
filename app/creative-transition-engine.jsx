@@ -57,6 +57,23 @@ const VOICE_RULES = `VOICE RULES (operationalised, never name the sources):
 - Every claim carries one concrete detail: a number, a place, an object, an action.
 - First person. Varied sentence length. British English. Plain verbs.`;
 
+const VOICE_EXAMPLES = `VOICE EXAMPLES — the practitioner's own before/after edits. Learn the principle behind each change; do not copy the content.
+
+PAIR 1
+Bad: "Owned and contributed to 10+ user stories per feature, writing detailed acceptance criteria, problem briefs, and edge-case definitions engineers could act on."
+Good: "I'd never written acceptance criteria in that format. There was no template and no onboarding, so I read the existing documentation, used AI to draft, and had no idea whether what came out was any good. My manager went through them with me line by line — this isn't right, this isn't right — for hours. She was patient. I learned the format by having it corrected."
+What changed: the bullet claims competence; the truth is the acquisition of competence, including who taught it and how it felt. The words she actually said are worth more than the number 10+.
+
+PAIR 2
+Bad: "Used AI-assisted prototyping (Lovable) to accelerate UI exploration and validate requirements before development handoff, reducing prototype-to-feedback turnaround."
+Good: "I pushed for Lovable and management pushed back — not because the tool was wrong, but because adopting it meant the team would slow down to learn it, and everything was already late. There was constant pressure about delivery dates. I didn't know for certain it would work. It was accepted in the end and became the prototyping engine for the HR flow."
+What changed: "accelerate" and "reducing turnaround" claim a result. The real story is an organisational fear about time, an uncertain bet, and adoption that arrived quietly. Naming the resistance makes the outcome believable.
+
+PAIR 3
+Bad: "Led cross-disciplinary creative projects blending storytelling, spatial design, and technology — skills directly applied in UX and product problem-solving."
+Good: "I learned lighting design because I wanted to talk to technicians in their own language. I'm not a lighting specialist. I learned enough to know what I was asking for. I've been doing that since I was six, on a violin — hours of boring repetition, nothing arriving easily. In a studio you stay with a phrase past the point it's comfortable. That's the same thing I do now with a codebase I don't understand yet."
+What changed: no claim of transferability — the transfer is demonstrated, not asserted. "Boring repetition" and "since I was six" are unfakeable. Naming the limit ("not a specialist") is what makes the rest credible.`;
+
 /* ---------------- Agent system prompts (hard output budgets) ---------------- */
 
 const SCOUT_SYSTEM = `You are the Scout in a career-translation pipeline. Given a target text (job advert or fund brief), and optionally CV material, write 3 interview questions that would surface the candidate's most relevant hidden experience for THIS receiver.
@@ -88,7 +105,7 @@ Rules:
 - Each bridge pairs ONE capability with ONE receiver need (requirement, value, or fear it answers).
 - strength: "strong" = evidence directly demonstrates it; "moderate" = solid inference; "stretch" = thin. Be honest.
 - HARD BUDGET: maximum 6 bridges; capability maximum 8 words; maps_to maximum 8 words; rationale maximum 12 words.
-- "rejection_note": write the polite 2-sentence rejection this receiver would send after reading ONLY the untranslated CV line — naming specifically what they could not see. Maximum 45 words. Plain, concrete, no drama.
+- "rejection_note": in maximum 45 words, name the SPECIFIC evidence this untranslated CV line fails to show this receiver. This is a diagnosis of what's missing, NOT a prediction of rejection and NOT a verdict on the candidate — the person may well have this evidence, it just isn't visible in the line as written. Plain, concrete, no drama.
 Return ONLY valid JSON, no fences, no preamble:
 {"bridges":[{"id":"b1","episode_id":"e1","capability":"...","maps_to":"...","need_type":"requirement|value|fear","rationale":"...","strength":"strong|moderate|stretch"}],"rejection_note":"..."}`;
 
@@ -97,6 +114,8 @@ Write the translation. The receiver's needs and vocabulary guide WHAT you select
 Output format requested: ${format}.
 
 ${VOICE_RULES}
+
+${VOICE_EXAMPLES}
 ${voiceSample ? `
 VOICE SAMPLE — the practitioner's own writing. Match its cadence, sentence rhythm and characteristic word choices. Do NOT copy its content or claims:
 """${voiceSample.slice(0, 1200)}"""` : ""}
@@ -256,6 +275,7 @@ export default function CreativeTransitionEngine() {
   const [profile, setProfile] = useState(null);
   const [bridges, setBridges] = useState(null);
   const [rejection, setRejection] = useState("");
+  const [gapState, setGapState] = useState({});
   const [draft, setDraft] = useState(null);
   const [critique, setCritique] = useState(null);
 
@@ -333,21 +353,56 @@ export default function CreativeTransitionEngine() {
     setLoading("");
   };
 
-  const runBridge = async () => {
+  const runBridge = async (graphOverride) => {
+    const g = Array.isArray(graphOverride) ? graphOverride : graph;
     setError(null);
     setLoading("The Bridge agent is mapping capabilities to receiver needs");
     try {
       const out = await callAgent(
         BRIDGE_SYSTEM,
-        "EXPERIENCE GRAPH:\n" + JSON.stringify(graph) +
+        "EXPERIENCE GRAPH:\n" + JSON.stringify(g) +
         "\n\nRECEIVER PROFILE:\n" + JSON.stringify(profile) +
         (baseline ? "\n\nUNTRANSLATED CV LINE:\n" + baseline : "")
       );
       setBridges((out.bridges || []).map((b) => ({ ...b, approved: b.strength !== "stretch" })));
       setRejection(out.rejection_note || out.blindspot || "");
       go(3);
-    } catch (e) { setError({ msg: e.message, retry: runBridge }); }
+    } catch (e) { setError({ msg: e.message, retry: () => runBridge(graphOverride) }); }
     setLoading("");
+  };
+
+  const updateGap = (item, patch) =>
+    setGapState((prev) => ({ ...prev, [item]: { ...prev[item], ...patch } }));
+
+  const askScout = async (item) => {
+    updateGap(item, { status: "unsure-loading" });
+    try {
+      const out = await callAgent(SCOUT_SYSTEM, "TARGET TEXT:\n" + item);
+      updateGap(item, { status: "unsure", question: (out.prompts || [])[0] || "", text: "" });
+    } catch (e) {
+      updateGap(item, { status: undefined });
+    }
+  };
+
+  const submitGap = async (item) => {
+    const g = gapState[item];
+    if (!g || !g.text || g.text.trim().length < 10) return;
+    updateGap(item, { status: "submitting" });
+    try {
+      const out = await callAgent(
+        ARCHIVIST_SYSTEM,
+        "RAW MATERIAL (first person, verbatim):\n" + g.text +
+        "\n\nRECEIVER REQUIREMENT THIS MATERIAL IS OFFERED AGAINST (context only — extract only what the material above actually shows):\n" + item
+      );
+      const stamp = Date.now();
+      const newEpisodes = (out.episodes || []).map((e, i) => ({ ...e, id: `g${stamp}_${i}` }));
+      const newGraph = [...graph, ...newEpisodes];
+      setGraph(newGraph);
+      updateGap(item, { status: "added" });
+      await runBridge(newGraph);
+    } catch (e) {
+      updateGap(item, { status: "have", error: e.message });
+    }
   };
 
   const runStoryteller = async () => {
@@ -386,12 +441,24 @@ export default function CreativeTransitionEngine() {
 
   const reset = () => {
     setStep(0); setMaxStep(0);
-    setGraph(null); setProfile(null); setBridges(null); setRejection("");
+    setGraph(null); setProfile(null); setBridges(null); setRejection(""); setGapState({});
     setDraft(null); setCritique(null); setError(null); setIdeas(null);
   };
 
   const inputsReady = rawStory.trim().length > 40 && targetText.trim().length > 40;
   const approvedBridges = bridges ? bridges.filter((b) => b.approved) : [];
+
+  const gapWords = (s) => new Set((s || "").toLowerCase().match(/[a-z]{4,}/g) || []);
+  const gapOverlaps = (a, b) => {
+    const wa = gapWords(a);
+    for (const w of gapWords(b)) if (wa.has(w)) return true;
+    return false;
+  };
+  const gapItems = profile
+    ? [...new Set([...(profile.explicit_requirements || []), ...(profile.implicit_values || [])])].filter(
+        (item) => !(bridges || []).some((b) => gapOverlaps(b.maps_to, item))
+      )
+    : [];
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.ink, fontFamily: F.body, fontSize: 15, lineHeight: 1.65 }}>
@@ -603,9 +670,12 @@ export default function CreativeTransitionEngine() {
             <div style={{ ...tag, marginBottom: 22 }}>The Bridge — approve only what you can defend in the room</div>
             {rejection && (
               <section style={{ background: C.wash, border: `2px solid ${C.ink}`, padding: "22px 24px", marginBottom: 28 }}>
-                <div style={{ ...tag, color: C.red, marginBottom: 10 }}>The rejection you'd receive untranslated</div>
+                <div style={{ ...tag, color: C.red, marginBottom: 10 }}>A rejection you might receive — and why</div>
                 <div style={{ fontFamily: F.display, fontWeight: 500, fontSize: 18, lineHeight: 1.5, fontStyle: "italic" }}>
                   “{rejection}”
+                </div>
+                <div style={{ fontSize: 13, color: C.sub, marginTop: 12 }}>
+                  This is what's missing, not a verdict. You may well have this — see below.
                 </div>
               </section>
             )}
@@ -628,6 +698,68 @@ export default function CreativeTransitionEngine() {
                 </label>
               </section>
             ))}
+
+            {gapItems.length > 0 && (
+              <section style={{ marginTop: 36 }}>
+                <div style={{ ...tag, marginBottom: 6 }}>What this receiver asked for that we couldn't evidence yet</div>
+                <div style={{ fontSize: 13.5, color: C.sub, marginBottom: 18, maxWidth: 560 }}>
+                  No pressure — this is just noticing what's not covered yet. You may well have it; we just haven't found the story.
+                </div>
+                {gapItems.map((item) => {
+                  const g = gapState[item] || {};
+                  return (
+                    <div key={item} style={{ borderTop: `1px solid ${C.line}`, padding: "16px 0" }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>{item}</div>
+
+                      {!g.status && (
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <Btn small onClick={() => updateGap(item, { status: "have", text: "" })}>I have this</Btn>
+                          <Btn small onClick={() => askScout(item)}>Not sure</Btn>
+                          <Btn small onClick={() => updateGap(item, { status: "no" })}>I don't have this</Btn>
+                        </div>
+                      )}
+
+                      {g.status === "unsure-loading" && (
+                        <div style={{ fontSize: 13.5, color: C.sub }}>Finding a plain way to ask about this…</div>
+                      )}
+
+                      {g.status === "unsure" && g.question && (
+                        <div className="cte-quote" style={{ marginTop: 0, marginBottom: 14 }}>{g.question}</div>
+                      )}
+
+                      {(g.status === "have" || g.status === "unsure") && (
+                        <div style={{ marginTop: 10 }}>
+                          <textarea
+                            rows={3}
+                            value={g.text || ""}
+                            onChange={(e) => updateGap(item, { text: e.target.value })}
+                            aria-label={"Your story for: " + item}
+                            placeholder="Tell it in your own words — the messier the better, we'll find what's usable."
+                          />
+                          {g.error && <div style={{ fontSize: 13, color: C.red, marginTop: 8 }}>{g.error}</div>}
+                          <div style={{ marginTop: 10 }}>
+                            <Btn small onClick={() => submitGap(item)} disabled={!g.text || g.text.trim().length < 10}>
+                              Add this evidence
+                            </Btn>
+                          </div>
+                        </div>
+                      )}
+
+                      {g.status === "submitting" && (
+                        <div style={{ fontSize: 13.5, color: C.sub, marginTop: 8 }}>Reading what you added and re-checking the bridges…</div>
+                      )}
+
+                      {g.status === "no" && (
+                        <div style={{ fontSize: 13.5, color: C.sub, marginTop: 4 }}>
+                          Noted. This stays out of the translation — nothing will claim it.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </section>
+            )}
+
             <div style={{ paddingTop: 30 }}>
               <Btn primary onClick={runStoryteller} disabled={!bridges.some((b) => b.approved)}>
                 Write the translation ({bridges.filter((b) => b.approved).length} approved) →
