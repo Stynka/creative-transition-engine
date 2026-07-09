@@ -2,7 +2,7 @@
 
 A six-agent AI pipeline that translates creative and embodied experience for a specific receiver — a hiring panel, an arts funder — with every claim traceable to the practitioner's own words.
 
-**Live app:**  https://claude.ai/public/artifacts/58ab431a-cbfb-46c3-ae17-41703590e239
+**Live app:** https://claude.ai/public/artifacts/58ab431a-cbfb-46c3-ae17-41703590e239
 
 ## Status: first-pass build, honestly scoped
 
@@ -24,7 +24,8 @@ raw story + CV line + voice sample + target text
    [0] SCOUT ── suggests interview questions from the target
    [1] ARCHIVIST ──────► Experience Graph (verbatim evidence quotes)
    [2] TARGET ANALYST ─► Receiver Profile (+ optional web search)
-   [3] BRIDGE ─────────► mapping matrix + "rejection you'd get untranslated"
+   [3] BRIDGE ─────────► mapping matrix + a rejection you might receive, and why
+   ── GAP DISCOVERY: what the receiver asked for that isn't evidenced yet ──
         ── HUMAN APPROVAL GATE ──
    [4] STORYTELLER ────► draft (voice rules + user's voice sample)
    [5] CRITIC ─────────► banned-pattern violations + fabrication check + rewrite
