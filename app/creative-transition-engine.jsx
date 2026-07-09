@@ -548,11 +548,14 @@ export default function CreativeTransitionEngine() {
           <div style={{ display: "grid", gap: 40 }}>
             <section>
               <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 20, margin: "0 0 12px" }}>
-                <Num n={1} />Raw material — tell one story in your own words
+                <Num n={1} />Raw material — one project, in your own words
               </h2>
+              <div style={{ color: C.sub, fontSize: 13.5, marginBottom: 10 }}>
+                Not sure which experience to use? Paste the job advert or fund brief below first, then let the Scout suggest what to write about.
+              </div>
               <textarea value={rawStory} onChange={(e) => setRawStory(e.target.value)} rows={8}
                 aria-label="Your raw story"
-                placeholder="Dictate or type about one specific project. Leave the frustrations and dead ends in — that's where the material is." />
+                placeholder="One specific thing you worked on — a project, a job, a production, a residency. Tell it the way you'd tell a friend, with the frustrations and dead ends left in. That's usually where the interesting parts are." />
               <div style={{ display: "flex", gap: 10, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <Btn small onClick={toggleVoice}>{listening ? "■ Stop" : "Try browser dictation"}</Btn>
                 <Btn small onClick={runScout} disabled={targetText.trim().length < 40 || ideasLoading}>
