@@ -31,7 +31,7 @@ Both personas are served by one product because the Target Analyst is input-driv
 
 - Translate one messy voice-note story into a cover-letter paragraph for a pasted job advert.
 - Translate the same story into a funding statement for a pasted fund brief (same pipeline, different receiver — demonstrated in demo).
-- Audit an existing CV line: see what a specific receiver *cannot see* in it (the "blindspot" output).
+- Audit an existing CV line: see what a specific receiver _cannot see_ in it (the "blindspot" output).
 - Generate CV-ready bullets with evidence traceability for interview preparation.
 
 ## 5. Architecture
@@ -65,20 +65,23 @@ Raw story + CV line + target text
 ```
 
 **Key design decisions:**
+
 - **Evidence quotes are the anti-fabrication mechanism.** The Archivist must copy verbatim substrings from user input; the Critic checks the final draft is traceable to them. Nothing invented survives.
 - **Receiver vocabulary guides selection, never voice.** The Storyteller uses the receiver profile to choose and order material; the voice rules (uncertainty named, non-linearity stated as fact, process decisions described, experiments over certainties) belong to the practitioner.
+- **Voice examples embedded in the prompt.** Three before/after pairs written by the practitioner sit inside the Storyteller's system prompt. Rules describe voice shape; examples demonstrate it working. Each good half names a limit — "I didn't know the format", "I didn't know it would work", "I'm not a specialist" — because constraints are what make the rest credible.
 - **The Critic is a testable humanizer.** Instead of "write like a human," a banned-pattern spec built from real user feedback is enforced with a violations report — making tone an evaluated property, not a vibe.
+  It names one thing that works first, quoting the line, before listing violations. This is not softening — the violations stay exactly as sharp. A good editor tells you what to keep.
 - **External tool integration:** the Target Analyst optionally calls web search to research the target organisation.
 
 **Model routing (production plan):**
 
-| Task | Model | Rationale |
-|---|---|---|
-| Archivist extraction | Haiku-class | Structured extraction; cheap, fast |
-| Target Analyst | Haiku-class + web search | Parsing + retrieval; low creativity needed |
-| Bridge mapping | Sonnet-class | Judgement about mapping honesty |
-| Storyteller | Sonnet-class | Voice quality is the product |
-| Critic | Haiku-class | Rule-checking against explicit spec |
+| Task                 | Model                    | Rationale                                  |
+| -------------------- | ------------------------ | ------------------------------------------ |
+| Archivist extraction | Haiku-class              | Structured extraction; cheap, fast         |
+| Target Analyst       | Haiku-class + web search | Parsing + retrieval; low creativity needed |
+| Bridge mapping       | Sonnet-class             | Judgement about mapping honesty            |
+| Storyteller          | Sonnet-class             | Voice quality is the product               |
+| Critic               | Haiku-class              | Rule-checking against explicit spec        |
 
 The MVP runs Sonnet throughout (platform constraint of the artifact runtime); the routing table is the cost-optimisation path at scale, replacing a "router agent" with a config decision.
 
@@ -99,7 +102,8 @@ The MVP runs Sonnet throughout (platform constraint of the artifact runtime); th
 
 ## 8. Iteration history (v1 → v2)
 
-v1 was a single Claude Code skill ("practice-translation") that translated creative work for audiences. Testing showed the missing half: translation quality depends on *receiver* understanding, and outputs had no measurable success criteria. v2 adds the Target Analyst (receiver mapping), the Bridge with human approval (auditability + metrics), and the Critic (testable tone enforcement).
+v1 was a single Claude Code skill ("practice-translation") that translated creative work for audiences. Testing showed the missing half: translation quality depends on _receiver_ understanding, and outputs had no measurable success criteria. v2 adds the Target Analyst (receiver mapping), the Bridge with human approval (auditability + metrics), and the Critic (testable tone enforcement).
+Then, watching myself use it: the rejection reframed from verdict to diagnosis, because a machine telling you you've failed lands differently than a machine naming what a reader couldn't see. Gap discovery, because the Bridge named a gap and then went silent — so users had no way to address it. The Critic saying what works first, because honest feedback requires acknowledging what landed before naming what didn't. Every fix came from a run that failed first.
 
 ## 9. Roadmap (out of MVP scope, deliberate)
 
@@ -113,6 +117,7 @@ v1 was a single Claude Code skill ("practice-translation") that translated creat
 - **Confabulation** — mitigated by evidence-quote traceability + human gate + Critic fabrication check.
 - **Over-translation into receiver-speak** — mitigated by the selection-not-voice rule and banned-pattern enforcement.
 - **N=1 validation** — founder is also the first user; next step is 5 concierge users from the dance community.
+- **Login wall** — visitors need a Claude account to run the published artifact. Acceptable for concierge validation; a barrier for scale. Self-hosting resolves this.
 
 ---
 
@@ -122,7 +127,9 @@ v1 was a single Claude Code skill ("practice-translation") that translated creat
 
 **Voice sample input:** user pastes paragraphs of their own writing; the Storyteller matches cadence and word choice (never content). Product position on AI detectors: we do not promise evasion — detectors are unreliable in both directions. The integrity position is stronger: every claim is the user's, human-approved, in their voice, and the UI instructs users to finish the draft by hand.
 
-**Rejection note:** the Bridge's blindspot is now written as the polite rejection the receiver would send for the untranslated CV line — pre-mortem and emotional hook.
+**Rejection note:** the Bridge writes it as a diagnosis, not a verdict — what this receiver could not see in the untranslated CV line. Two sentences, plain language, no drama. The UI makes clear: this is what's missing, not a prediction. The person may well have the evidence; it's just not visible yet.
+
+**Gap discovery:** when the receiver asked for something and no bridge answers it, the system surfaces it plainly with three options: _I have this_ (opens a box; new material goes through the Archivist with a verbatim quote), _Not sure_ (the Scout asks a question in plain language — never the industry's word for the thing, because people often have the experience and lack only the vocabulary), _I don't have this_ (acknowledged; the Storyteller never claims it).
 
 **Interview Armour:** the final screen pairs every approved claim with the verbatim quote backing it, for interview preparation. Unique to this architecture: only possible because of evidence traceability.
 
